@@ -16,6 +16,7 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { useAttendance } from '@/context/AttendanceContext';
+import { UserButton, useUser } from '@clerk/nextjs';
 
 export type NavTab =
   | 'dashboard'
@@ -34,7 +35,11 @@ interface SidebarProps {
 
 export default function Sidebar({ activeTab, setActiveTab, onOpenUpload }: SidebarProps) {
   const { store, stats, updateSettings } = useAttendance();
+  const { user } = useUser();
   const theme = store.settings.theme || 'dark';
+
+  const displayName =
+    user?.fullName || user?.firstName || store.settings.studentName || 'Student';
 
   const navItems: { id: NavTab; label: string; icon: React.ReactNode; badge?: string | number }[] = [
     {
@@ -168,7 +173,7 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenUpload }: Sideb
               textOverflow: 'ellipsis',
             }}
           >
-            {store.settings.studentName || 'Student'}
+            {displayName}
           </div>
           <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
             Batch: {store.settings.selectedBatch || 'All'} • {store.settings.semester || 'College'}
@@ -289,35 +294,69 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenUpload }: Sideb
         </div>
       </nav>
 
-      {/* Footer / Theme Toggle */}
+      {/* User Account / Footer */}
       <div
         style={{
-          padding: '16px 20px',
+          padding: '14px 16px',
           borderTop: '1px solid var(--border-subtle)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: '10px',
         }}
       >
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Theme Mode</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+          <UserButton
+            afterSignOutUrl="/sign-in"
+            appearance={{
+              elements: {
+                avatarBox: { width: '32px', height: '32px' },
+              },
+            }}
+          />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {displayName}
+            </div>
+            <div
+              style={{
+                fontSize: '0.7rem',
+                color: 'var(--text-muted)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {user?.primaryEmailAddress?.emailAddress || 'Account'}
+            </div>
+          </div>
+        </div>
+
         <button
           onClick={toggleTheme}
           style={{
             background: 'var(--bg-card)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 'var(--radius-md)',
-            padding: '6px 10px',
+            padding: '7px',
             color: 'var(--text-primary)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            fontSize: '0.8rem',
-            fontWeight: 500,
+            justifyContent: 'center',
           }}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
         >
           {theme === 'dark' ? <Moon size={15} /> : <Sun size={15} />}
-          <span style={{ textTransform: 'capitalize' }}>{theme}</span>
         </button>
       </div>
     </aside>

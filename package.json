@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@clerk/nextjs": "^5.7.5",
     "@google/generative-ai": "^0.24.1",
     "canvas-confetti": "^1.9.4",
     "lucide-react": "^0.469.0",

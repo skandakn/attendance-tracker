@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { LayoutDashboard, CalendarCheck, BookOpen, CalendarDays, BarChart3, Settings } from 'lucide-react';
+import { UserButton } from '@clerk/nextjs';
 import { NavTab } from './Sidebar';
 
 interface MobileNavProps {
@@ -46,6 +47,27 @@ export default function MobileNav({ activeTab, setActiveTab }: MobileNavProps) {
           </button>
         );
       })}
+
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '6px 4px',
+          gap: '3px',
+        }}
+      >
+        <UserButton
+          afterSignOutUrl="/sign-in"
+          appearance={{
+            elements: {
+              avatarBox: { width: '22px', height: '22px' },
+            },
+          }}
+        />
+        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Profile</span>
+      </div>
     </nav>
   );
 }

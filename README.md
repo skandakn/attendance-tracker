@@ -119,16 +119,25 @@ npm install
 ```
 *(On Windows PowerShell with disabled script execution policy, use `npm.cmd install`)*
 
-### 3. Configure GEMINI_API_KEY
+### 3. Configure Environment Variables
 Create a `.env` file in the project root:
 ```bash
 cp .env.example .env
 ```
-Open `.env` and add your Google Gemini API key:
+Open `.env` and add your Google Gemini and Clerk Authentication keys:
 ```env
+# Google Gemini API key: https://aistudio.google.com/
 GEMINI_API_KEY=your_actual_gemini_api_key_here
+
+# Clerk Authentication: https://clerk.com
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
 ```
-> **How to get a key:** You can generate a free Gemini API key from [Google AI Studio](https://aistudio.google.com/).
+> **How to get a key:** You can generate a free Gemini API key from [Google AI Studio](https://aistudio.google.com/) and Clerk keys from the [Clerk Dashboard](https://dashboard.clerk.com/).
 > *Note: If you don't have an API key right now, you can still test every single feature of AttendAI using the built-in **"Try Demo"** mode!*
 
 ### 4. Run Unit Tests

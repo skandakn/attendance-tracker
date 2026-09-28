@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ClerkProvider } from '@clerk/nextjs';
 import { AttendanceProvider } from '@/context/AttendanceContext';
 import ToastContainer from '@/components/common/ToastContainer';
 
@@ -23,13 +24,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body>
-        <AttendanceProvider>
-          {children}
-          <ToastContainer />
-        </AttendanceProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className="dark">
+        <body>
+          <AttendanceProvider>
+            {children}
+            <ToastContainer />
+          </AttendanceProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

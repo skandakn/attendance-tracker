@@ -16,7 +16,10 @@ const secretKey =
 export default clerkMiddleware(
   (auth, request) => {
     if (!isPublicRoute(request)) {
-      auth().protect();
+      const authObj = auth();
+      if (!authObj.userId) {
+        return authObj.redirectToSignIn({ returnBackUrl: request.url });
+      }
     }
   },
   {

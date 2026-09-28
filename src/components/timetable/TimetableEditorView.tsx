@@ -33,6 +33,7 @@ export default function TimetableEditorView() {
     period: Period;
     isNew?: boolean;
   } | null>(null);
+  const [applyToAllDays, setApplyToAllDays] = useState(false);
 
   // Available batches
   const detectedBatches = Array.from(
@@ -60,12 +61,13 @@ export default function TimetableEditorView() {
     if (!editingPeriodModal) return;
 
     if (editingPeriodModal.isNew) {
-      addTimetablePeriod(editingPeriodModal.dayName, period);
+      addTimetablePeriod(editingPeriodModal.dayName, period, applyToAllDays);
     } else {
-      updateTimetablePeriod(editingPeriodModal.dayName, period.id, period);
+      updateTimetablePeriod(editingPeriodModal.dayName, period.id, period, applyToAllDays);
     }
 
     setEditingPeriodModal(null);
+    setApplyToAllDays(false);
   };
 
   return (
@@ -529,6 +531,42 @@ export default function TimetableEditorView() {
                     className="input"
                   />
                 </div>
+              </div>
+
+              {/* All Days Sync Option */}
+              <div
+                style={{
+                  padding: '12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={applyToAllDays}
+                    onChange={(e) => setApplyToAllDays(e.target.checked)}
+                    style={{ marginTop: '3px', cursor: 'pointer' }}
+                  />
+                  <div>
+                    <span>Apply to all days (Monday – Friday)</span>
+                    <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 400, marginTop: '2px' }}>
+                      {applyToAllDays
+                        ? `Will replicate/update this class slot across every weekday in the master schedule.`
+                        : `Default: Applies to all ${editingPeriodModal.dayName}s across the semester.`}
+                    </p>
+                  </div>
+                </label>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>

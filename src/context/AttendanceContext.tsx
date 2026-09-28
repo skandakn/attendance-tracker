@@ -58,9 +58,22 @@ interface AttendanceContextType {
   deleteSubject: (subjectId: string) => void;
 
   // Timetable actions
-  updateTimetablePeriod: (dayName: string, periodId: string, updated: Partial<Period>) => void;
-  addTimetablePeriod: (dayName: string, period: Period) => void;
-  deleteTimetablePeriod: (dayName: string, periodId: string) => void;
+  updateTimetablePeriod: (
+    dayName: string,
+    periodId: string,
+    updated: Partial<Period>,
+    applyToAllDays?: boolean
+  ) => void;
+  addTimetablePeriod: (
+    dayName: string,
+    period: Period,
+    applyToAllDays?: boolean
+  ) => void;
+  deleteTimetablePeriod: (
+    dayName: string,
+    periodId: string,
+    applyToAllDays?: boolean
+  ) => void;
 
   // Holidays & Extra classes
   addHoliday: (holiday: Omit<Holiday, 'id'>) => void;
@@ -330,50 +343,226 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     showToast('Subject deleted', 'info');
   };
 
-  // Timetable Period actions
-  const updateTimetablePeriod = (dayName: string, periodId: string, updated: Partial<Period>) => {
+  // Timetable Period actions (Master Timetable)
+  const updateTimetablePeriod = (
+    dayName: string,
+    periodId: string,
+    updated: Partial<Period>,
+    applyToAllDays: boolean = false
+  ) => {
     setStore((prev) => {
+      // Find previous period to detect if subject name or details changed
+      let oldPeriod: Period | undefined;
+      for (const d of prev.timetable.days) {
+        const found = d.periods.find((p) => p.id === periodId);
+        if (found) {
+          oldPeriod = found;
+          break;
+        }
+      }
+
+      const oldSubjectName = (oldPeriod?.subject || '').trim().toLowerCase();
+      const newSubjectName = (updated.subject !== undefined ? updated.subject : oldPeriod?.subject || '').trim();
+
       const days = prev.timetable.days.map((d) => {
-        if (d.day.toLowerCase() !== dayName.toLowerCase()) return d;
+        const isTargetDay = d.day.toLowerCase() === dayName.toLowerCase();
+        if (!isTargetDay && !applyToAllDays) return d;
+
+        const updatedPeriods = d.periods.map((p) => {
+          const isMatchingPeriod =
+            p.id === periodId ||
+            (applyToAllDays && oldSubjectName && p.subject.toLowerCase() === oldSubjectName);
+
+          if (isMatchingPeriod) {
+            return { ...p, ...updated };
+          }
+          return p;
+        });
+
+        // If applyToAllDays and this day doesn't already have this period/subject, replicate it
+        if (
+          applyToAllDays &&
+          !updatedPeriods.some(
+            (p) =>
+              p.id === periodId ||
+              (newSubjectName && p.subject.toLowerCase() === newSubjectName.toLowerCase())
+          )
+        ) {
+          updatedPeriods.push({
+            id: `p_${d.day.toLowerCase()}_${Date.now().toString(36)}_${Math.random()
+              .toString(36)
+              .substring(2, 5)}`,
+            start: updated.start || oldPeriod?.start || '09:00',
+            end: updated.end || oldPeriod?.end || '10:00',
+            subject: newSubjectName,
+            subject_code: updated.subject_code ?? oldPeriod?.subject_code,
+            faculty: updated.faculty ?? oldPeriod?.faculty,
+            room: updated.room ?? oldPeriod?.room,
+            type: updated.type || oldPeriod?.type || 'lecture',
+            batch: updated.batch !== undefined ? updated.batch : oldPeriod?.batch,
+          });
+        }
+
         return {
           ...d,
-          periods: d.periods.map((p) => (p.id === periodId ? { ...p, ...updated } : p)),
+          periods: updatedPeriods,
         };
+      });
+
+      // Synchronize subjects in store.subjects so 75% analytics & tracker stay accurate
+      let updatedSubjects = [...prev.subjects];
+      if (newSubjectName) {
+        const existingSubjectIdx = updatedSubjects.findIndex(
+          (s) =>
+            (oldSubjectName && s.name.toLowerCase() === oldSubjectName) ||
+            s.name.toLowerCase() === newSubjectName.toLowerCase()
+        );
+
+        if (existingSubjectIdx >= 0) {
+          updatedSubjects[existingSubjectIdx] = {
+            ...updatedSubjects[existingSubjectIdx],
+            name: newSubjectName,
+            code: updated.subject_code ?? updatedSubjects[existingSubjectIdx].code,
+            faculty: updated.faculty ?? updatedSubjects[existingSubjectIdx].faculty,
+            room: updated.room ?? updatedSubjects[existingSubjectIdx].room,
+          };
+        } else {
+          // Register new subject in subjects list
+          const colorPalette = [
+            '#4F46E5', '#059669', '#2563EB', '#D97706',
+            '#7C3AED', '#DB2777', '#0891B2', '#EA580C',
+          ];
+          updatedSubjects.push({
+            id: `subj_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
+            name: newSubjectName,
+            code: updated.subject_code || '',
+            faculty: updated.faculty || '',
+            room: updated.room || '',
+            color: colorPalette[updatedSubjects.length % colorPalette.length],
+            targetPercentage: prev.settings.targetPercentage || 75,
+          });
+        }
+      }
+
+      // Synchronize existing attendanceRecords timeslot and batch if changed
+      const updatedAttendanceRecords = prev.attendanceRecords.map((r) => {
+        if (r.periodId === periodId) {
+          const newTimeSlot =
+            updated.start && updated.end ? `${updated.start} - ${updated.end}` : r.timeSlot;
+          return {
+            ...r,
+            timeSlot: newTimeSlot,
+            batch: updated.batch !== undefined ? updated.batch : r.batch,
+          };
+        }
+        return r;
       });
 
       return {
         ...prev,
         timetable: { ...prev.timetable, days },
+        subjects: updatedSubjects,
+        attendanceRecords: updatedAttendanceRecords,
       };
     });
-    showToast('Period updated', 'success');
+
+    const msg = applyToAllDays
+      ? `Updated "${updated.subject || 'class'}" across all days in timetable`
+      : `Updated "${updated.subject || 'class'}" for all ${dayName}s in master timetable`;
+    showToast(msg, 'success');
   };
 
-  const addTimetablePeriod = (dayName: string, period: Period) => {
+  const addTimetablePeriod = (
+    dayName: string,
+    period: Period,
+    applyToAllDays: boolean = false
+  ) => {
     setStore((prev) => {
       const days = prev.timetable.days.map((d) => {
-        if (d.day.toLowerCase() !== dayName.toLowerCase()) return d;
+        const isTarget = d.day.toLowerCase() === dayName.toLowerCase();
+        if (!isTarget && !applyToAllDays) return d;
+
+        const newP: Period = {
+          ...period,
+          id: isTarget
+            ? period.id
+            : `p_${d.day.toLowerCase()}_${Date.now().toString(36)}_${Math.random()
+                .toString(36)
+                .substring(2, 5)}`,
+        };
+
         return {
           ...d,
-          periods: [...d.periods, period],
+          periods: [...d.periods, newP],
         };
       });
+
+      // Ensure subject is tracked in store.subjects
+      let updatedSubjects = [...prev.subjects];
+      const trimmedSub = (period.subject || '').trim();
+      const isAcademic = !['break', 'lunch', 'free'].includes(period.type);
+
+      if (trimmedSub && isAcademic) {
+        const exists = updatedSubjects.some(
+          (s) => s.name.toLowerCase() === trimmedSub.toLowerCase()
+        );
+        if (!exists) {
+          const colorPalette = [
+            '#4F46E5', '#059669', '#2563EB', '#D97706',
+            '#7C3AED', '#DB2777', '#0891B2', '#EA580C',
+          ];
+          updatedSubjects.push({
+            id: `subj_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
+            name: trimmedSub,
+            code: period.subject_code || '',
+            faculty: period.faculty || '',
+            room: period.room || '',
+            color: colorPalette[updatedSubjects.length % colorPalette.length],
+            targetPercentage: prev.settings.targetPercentage || 75,
+          });
+        }
+      }
 
       return {
         ...prev,
         timetable: { ...prev.timetable, days },
+        subjects: updatedSubjects,
       };
     });
-    showToast('Period added', 'success');
+
+    const msg = applyToAllDays
+      ? `Added "${period.subject}" to all days in timetable`
+      : `Added "${period.subject}" for all ${dayName}s in master timetable`;
+    showToast(msg, 'success');
   };
 
-  const deleteTimetablePeriod = (dayName: string, periodId: string) => {
+  const deleteTimetablePeriod = (
+    dayName: string,
+    periodId: string,
+    applyToAllDays: boolean = false
+  ) => {
     setStore((prev) => {
+      let targetSubject = '';
+      for (const d of prev.timetable.days) {
+        const p = d.periods.find((item) => item.id === periodId);
+        if (p) {
+          targetSubject = p.subject.toLowerCase();
+          break;
+        }
+      }
+
       const days = prev.timetable.days.map((d) => {
-        if (d.day.toLowerCase() !== dayName.toLowerCase()) return d;
+        const isTarget = d.day.toLowerCase() === dayName.toLowerCase();
+        if (!isTarget && !applyToAllDays) return d;
+
         return {
           ...d,
-          periods: d.periods.filter((p) => p.id !== periodId),
+          periods: d.periods.filter((p) => {
+            if (applyToAllDays && targetSubject) {
+              return p.id !== periodId && p.subject.toLowerCase() !== targetSubject;
+            }
+            return p.id !== periodId;
+          }),
         };
       });
 
@@ -382,7 +571,11 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         timetable: { ...prev.timetable, days },
       };
     });
-    showToast('Period removed', 'info');
+
+    const msg = applyToAllDays
+      ? 'Removed class slot from all days in timetable'
+      : `Removed class slot for all ${dayName}s in master timetable`;
+    showToast(msg, 'info');
   };
 
   // Holidays

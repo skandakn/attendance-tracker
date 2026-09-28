@@ -12,14 +12,37 @@ import {
   Calendar as CalendarIcon,
   RotateCcw,
   Sparkles,
+  Edit2,
+  Trash2,
+  Plus,
+  X,
+  User,
+  MapPin,
+  Layers,
 } from 'lucide-react';
 import { isAcademicPeriod, isPeriodForBatch, isHoliday } from '@/lib/attendanceCalculations';
+import { Period } from '@/types';
 
 export default function CalendarView() {
-  const { store, markAttendance, addHoliday, removeHoliday } = useAttendance();
+  const {
+    store,
+    markAttendance,
+    addHoliday,
+    removeHoliday,
+    updateTimetablePeriod,
+    addTimetablePeriod,
+    deleteTimetablePeriod,
+  } = useAttendance();
 
   const [currentMonthDate, setCurrentMonthDate] = useState(() => new Date());
   const [selectedDateStr, setSelectedDateStr] = useState(() => new Date().toISOString().split('T')[0]);
+
+  const [editingPeriodModal, setEditingPeriodModal] = useState<{
+    dayName: string;
+    period: Period;
+    isNew?: boolean;
+  } | null>(null);
+  const [applyToAllDays, setApplyToAllDays] = useState(false);
 
   // Calendar calculations
   const year = currentMonthDate.getFullYear();
@@ -297,19 +320,54 @@ export default function CalendarView() {
             </div>
           )}
 
-          {/* Classes list for selected date */}
-          <h4
+          {/* Classes list header with Add Class button */}
+          <div
             style={{
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              color: 'var(--text-muted)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-              marginBottom: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '12px',
+              flexWrap: 'wrap',
+              gap: '8px',
             }}
           >
-            Classes on this date ({selAcademicPeriods.length})
-          </h4>
+            <h4
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                color: 'var(--text-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                margin: 0,
+              }}
+            >
+              Classes on this date ({selAcademicPeriods.length})
+            </h4>
+
+            <button
+              onClick={() => {
+                setEditingPeriodModal({
+                  dayName: selDayName,
+                  period: {
+                    id: `p_${Date.now()}`,
+                    start: '09:00',
+                    end: '10:00',
+                    subject: '',
+                    type: 'lecture',
+                    batch: store.settings.selectedBatch === 'All' ? null : store.settings.selectedBatch,
+                  },
+                  isNew: true,
+                });
+                setApplyToAllDays(false);
+              }}
+              className="btn btn-primary"
+              style={{ padding: '5px 12px', fontSize: '0.75rem', gap: '5px' }}
+              title={`Add class to master timetable for all ${selDayName}s`}
+            >
+              <Plus size={14} />
+              <span>Add Class Slot</span>
+            </button>
+          </div>
 
           {selAcademicPeriods.length === 0 ? (
             <div
@@ -318,9 +376,36 @@ export default function CalendarView() {
                 textAlign: 'center',
                 color: 'var(--text-muted)',
                 fontSize: '0.85rem',
+                background: 'var(--bg-card)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px dashed var(--border-subtle)',
               }}
             >
               No scheduled classes on {selDayName} for batch {store.settings.selectedBatch || 'All'}.
+              <div style={{ marginTop: '8px' }}>
+                <button
+                  onClick={() => {
+                    setEditingPeriodModal({
+                      dayName: selDayName,
+                      period: {
+                        id: `p_${Date.now()}`,
+                        start: '09:00',
+                        end: '10:00',
+                        subject: '',
+                        type: 'lecture',
+                        batch: store.settings.selectedBatch === 'All' ? null : store.settings.selectedBatch,
+                      },
+                      isNew: true,
+                    });
+                    setApplyToAllDays(false);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.75rem', padding: '4px 10px', gap: '4px' }}
+                >
+                  <Plus size={13} />
+                  <span>Add Class for {selDayName}s</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -343,35 +428,121 @@ export default function CalendarView() {
                       borderRadius: 'var(--radius-md)',
                       background: 'var(--bg-card-hover)',
                       border: '1px solid var(--border-subtle)',
+                      borderLeft: `4px solid ${sub?.color || 'var(--primary)'}`,
                     }}
                   >
                     <div
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         justifyContent: 'space-between',
                         marginBottom: '8px',
+                        gap: '8px',
                       }}
                     >
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.925rem' }}>{period.subject}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                          {period.start} - {period.end}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.925rem' }}>{period.subject}</span>
+                          {period.subject_code && (
+                            <span
+                              style={{
+                                fontSize: '0.675rem',
+                                padding: '1px 5px',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'var(--bg-input)',
+                                color: 'var(--text-muted)',
+                                fontFamily: 'var(--font-mono)',
+                              }}
+                            >
+                              {period.subject_code}
+                            </span>
+                          )}
+                          <span
+                            style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 700,
+                              padding: '1px 5px',
+                              borderRadius: 'var(--radius-full)',
+                              background:
+                                period.type === 'lab'
+                                  ? 'rgba(236, 72, 153, 0.15)'
+                                  : 'var(--primary-light)',
+                              color: period.type === 'lab' ? '#ec4899' : 'var(--primary)',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {period.type}
+                          </span>
                         </div>
+
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Clock size={12} style={{ color: 'var(--primary)' }} />
+                          <span>{period.start} - {period.end}</span>
+                          {period.batch && (
+                            <span style={{ color: 'var(--text-muted)' }}>• Batch {period.batch}</span>
+                          )}
+                        </div>
+
+                        {(period.faculty || period.room) && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.725rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {period.faculty && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <User size={11} /> {period.faculty}
+                              </span>
+                            )}
+                            {period.room && (
+                              <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <MapPin size={11} /> {period.room}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
-                      <span
-                        className={`badge ${
-                          status === 'present'
-                            ? 'badge-above'
-                            : status === 'absent'
-                            ? 'badge-critical'
-                            : 'badge-warning'
-                        }`}
-                        style={{ fontSize: '0.675rem' }}
-                      >
-                        {status}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span
+                          className={`badge ${
+                            status === 'present'
+                              ? 'badge-above'
+                              : status === 'absent'
+                              ? 'badge-critical'
+                              : 'badge-warning'
+                          }`}
+                          style={{ fontSize: '0.675rem' }}
+                        >
+                          {status}
+                        </span>
+
+                        <button
+                          onClick={() => {
+                            setEditingPeriodModal({
+                              dayName: selDayName,
+                              period: { ...period },
+                              isNew: false,
+                            });
+                            setApplyToAllDays(false);
+                          }}
+                          className="btn btn-ghost"
+                          style={{ padding: '4px 8px', fontSize: '0.75rem', gap: '4px' }}
+                          title={`Edit this class in master timetable (updates all ${selDayName}s)`}
+                        >
+                          <Edit2 size={13} />
+                          <span>Edit</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remove "${period.subject}" from master timetable for all ${selDayName}s?`)) {
+                              deleteTimetablePeriod(selDayName, period.id);
+                            }
+                          }}
+                          className="btn btn-ghost"
+                          style={{ padding: '4px 6px', color: 'var(--danger-text)' }}
+                          title="Delete from master timetable"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Quick status change buttons */}
@@ -445,8 +616,315 @@ export default function CalendarView() {
               })}
             </div>
           )}
+
+          {/* Master Timetable sync hint */}
+          <div
+            style={{
+              padding: '10px 14px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-input)',
+              border: '1px solid var(--border-subtle)',
+              fontSize: '0.75rem',
+              color: 'var(--text-muted)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginTop: '16px',
+            }}
+          >
+            <Sparkles size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+            <span>
+              <strong>Master Timetable Linked:</strong> Timetable is the main source of truth. Changes made with <strong>Edit</strong> or <strong>Add Slot</strong> automatically apply to <strong>all {selDayName}s</strong> across the semester.
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* Edit / Add Period Modal */}
+      {editingPeriodModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999,
+            padding: '16px',
+          }}
+        >
+          <div
+            className="card animate-fade-in"
+            style={{
+              maxWidth: '480px',
+              width: '100%',
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-strong)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '16px',
+              }}
+            >
+              <div>
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                  {editingPeriodModal.isNew
+                    ? `Add Class Slot (${editingPeriodModal.dayName})`
+                    : `Edit Class Slot (${editingPeriodModal.dayName})`}
+                </h4>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Timetable is the main schedule. Changes here update all {editingPeriodModal.dayName}s.
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingPeriodModal(null)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                  Subject Name
+                </label>
+                <input
+                  type="text"
+                  value={editingPeriodModal.period.subject}
+                  onChange={(e) =>
+                    setEditingPeriodModal({
+                      ...editingPeriodModal,
+                      period: { ...editingPeriodModal.period, subject: e.target.value },
+                    })
+                  }
+                  placeholder="e.g. Operating Systems"
+                  className="input"
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                    Start Time
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPeriodModal.period.start}
+                    onChange={(e) =>
+                      setEditingPeriodModal({
+                        ...editingPeriodModal,
+                        period: { ...editingPeriodModal.period, start: e.target.value },
+                      })
+                    }
+                    placeholder="10:30"
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                    End Time
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPeriodModal.period.end}
+                    onChange={(e) =>
+                      setEditingPeriodModal({
+                        ...editingPeriodModal,
+                        period: { ...editingPeriodModal.period, end: e.target.value },
+                      })
+                    }
+                    placeholder="11:30"
+                    className="input"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                    Period Type
+                  </label>
+                  <select
+                    value={editingPeriodModal.period.type}
+                    onChange={(e) =>
+                      setEditingPeriodModal({
+                        ...editingPeriodModal,
+                        period: { ...editingPeriodModal.period, type: e.target.value as any },
+                      })
+                    }
+                    className="input"
+                  >
+                    <option value="lecture">Lecture</option>
+                    <option value="lab">Lab</option>
+                    <option value="tutorial">Tutorial</option>
+                    <option value="break">Break</option>
+                    <option value="lunch">Lunch</option>
+                    <option value="free">Free Period</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                    Subject Code (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPeriodModal.period.subject_code || ''}
+                    onChange={(e) =>
+                      setEditingPeriodModal({
+                        ...editingPeriodModal,
+                        period: {
+                          ...editingPeriodModal.period,
+                          subject_code: e.target.value.trim() ? e.target.value.trim() : undefined,
+                        },
+                      })
+                    }
+                    placeholder="e.g. BCS301"
+                    className="input"
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                    Faculty Name (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPeriodModal.period.faculty || ''}
+                    onChange={(e) =>
+                      setEditingPeriodModal({
+                        ...editingPeriodModal,
+                        period: { ...editingPeriodModal.period, faculty: e.target.value },
+                      })
+                    }
+                    placeholder="e.g. Prof. Smith"
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                    Room / Lab (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingPeriodModal.period.room || ''}
+                    onChange={(e) =>
+                      setEditingPeriodModal({
+                        ...editingPeriodModal,
+                        period: { ...editingPeriodModal.period, room: e.target.value },
+                      })
+                    }
+                    placeholder="e.g. 525"
+                    className="input"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '4px' }}>
+                  Batch (optional)
+                </label>
+                <input
+                  type="text"
+                  value={editingPeriodModal.period.batch || ''}
+                  onChange={(e) =>
+                    setEditingPeriodModal({
+                      ...editingPeriodModal,
+                      period: {
+                        ...editingPeriodModal.period,
+                        batch: e.target.value.trim() ? e.target.value.trim() : null,
+                      },
+                    })
+                  }
+                  placeholder="e.g. D4, or leave blank for all batches"
+                  className="input"
+                />
+              </div>
+
+              {/* All Days Sync Option */}
+              <div
+                style={{
+                  padding: '12px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={applyToAllDays}
+                    onChange={(e) => setApplyToAllDays(e.target.checked)}
+                    style={{ marginTop: '3px', cursor: 'pointer' }}
+                  />
+                  <div>
+                    <span>Apply to all days (Monday – Friday)</span>
+                    <p style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 400, marginTop: '2px' }}>
+                      {applyToAllDays
+                        ? `Will update/replicate this class slot across every weekday in the master schedule.`
+                        : `Default: Updates all ${editingPeriodModal.dayName}s across the semester.`}
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingPeriodModal(null)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!editingPeriodModal.period.subject.trim()) {
+                      alert('Please enter a subject name.');
+                      return;
+                    }
+
+                    if (editingPeriodModal.isNew) {
+                      addTimetablePeriod(editingPeriodModal.dayName, editingPeriodModal.period, applyToAllDays);
+                    } else {
+                      updateTimetablePeriod(
+                        editingPeriodModal.dayName,
+                        editingPeriodModal.period.id,
+                        editingPeriodModal.period,
+                        applyToAllDays
+                      );
+                    }
+
+                    setEditingPeriodModal(null);
+                    setApplyToAllDays(false);
+                  }}
+                  className="btn btn-primary"
+                >
+                  {editingPeriodModal.isNew ? 'Add to Timetable' : 'Save to Timetable'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

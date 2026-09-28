@@ -9,7 +9,6 @@ import {
   Upload,
   RotateCcw,
   Trash2,
-  Key,
   ShieldCheck,
   CheckCircle2,
   Building,
@@ -32,7 +31,7 @@ export default function SettingsView() {
     semester: store.settings.semester || '',
     section: store.settings.section || '',
     selectedBatch: store.settings.selectedBatch || 'All',
-    targetPercentage: store.settings.targetPercentage || 75,
+    targetPercentage: store.settings.targetPercentage ?? 75,
     trackingMode: store.settings.trackingMode || 'from_today',
     theme: store.settings.theme || 'dark',
   });
@@ -202,24 +201,43 @@ export default function SettingsView() {
           </h3>
 
           <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>
                 Target Attendance Requirement:
               </label>
-              <strong style={{ fontSize: '1.1rem', color: 'var(--primary)' }}>
-                {formState.targetPercentage}%
-              </strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formState.targetPercentage}
+                  onChange={(e) => {
+                    const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                    setFormState({ ...formState, targetPercentage: val });
+                  }}
+                  className="input"
+                  style={{
+                    width: '65px',
+                    padding: '4px 8px',
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    textAlign: 'center',
+                    color: 'var(--primary)',
+                  }}
+                />
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary)' }}>%</span>
+              </div>
             </div>
             <input
               type="range"
-              min={60}
-              max={90}
+              min={0}
+              max={100}
               step={1}
               value={formState.targetPercentage}
               onChange={(e) =>
                 setFormState({ ...formState, targetPercentage: Number(e.target.value) })
               }
-              style={{ width: '100%', accentColor: 'var(--primary)' }}
+              style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }}
             />
             <div
               style={{
@@ -230,9 +248,10 @@ export default function SettingsView() {
                 marginTop: '4px',
               }}
             >
-              <span>60% (Lenient)</span>
-              <span>75% (Standard University Requirement)</span>
-              <span>85% (Scholarship / Honors)</span>
+              <span>0% (No Requirement)</span>
+              <span>50% (Half)</span>
+              <span>75% (Standard University)</span>
+              <span>100% (Strict)</span>
             </div>
           </div>
 
@@ -271,35 +290,6 @@ export default function SettingsView() {
         </div>
       </form>
 
-      {/* Gemini AI & Privacy Information Card */}
-      <div className="card" style={{ padding: '24px', marginTop: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-          <Key size={18} style={{ color: 'var(--primary)' }} />
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700 }}>Gemini AI Vision Integration &amp; Privacy</h3>
-        </div>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '14px' }}>
-          Timetable extraction is performed via server-side Google Gemini Vision API calls.
-          Your <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>GEMINI_API_KEY</code> is
-          loaded securely from the server environment (<code style={{ fontFamily: 'var(--font-mono)' }}>.env</code>)
-          and is <strong>never</strong> exposed in client-side code or browser requests.
-        </p>
-
-        <div
-          style={{
-            padding: '12px 16px',
-            borderRadius: 'var(--radius-md)',
-            background: 'var(--bg-input)',
-            fontSize: '0.8rem',
-            color: 'var(--text-muted)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <ShieldCheck size={16} style={{ color: 'var(--success)' }} />
-          <span>Timetable images are processed in-memory for extraction only and are never saved to disk.</span>
-        </div>
-      </div>
 
       {/* Data Backup & Reset Card */}
       <div className="card" style={{ padding: '24px', marginTop: '24px' }}>

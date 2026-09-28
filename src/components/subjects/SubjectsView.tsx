@@ -122,7 +122,7 @@ export default function SubjectsView({ initialSelectedSubjectId }: SubjectsViewP
         }}
       >
         {subjectStatsList.map((stat) => {
-          const target = stat.targetPercentage || store.settings.targetPercentage || 75;
+          const target = stat.targetPercentage ?? store.settings.targetPercentage ?? 75;
           const isAbove = stat.percentage >= target;
 
           return (
@@ -706,7 +706,7 @@ export default function SubjectsView({ initialSelectedSubjectId }: SubjectsViewP
                   </label>
                   <input
                     type="number"
-                    min={50}
+                    min={0}
                     max={100}
                     value={newSubForm.targetPercentage}
                     onChange={(e) => setNewSubForm({ ...newSubForm, targetPercentage: Number(e.target.value) })}
@@ -856,7 +856,7 @@ export default function SubjectsView({ initialSelectedSubjectId }: SubjectsViewP
                   </label>
                   <input
                     type="number"
-                    min={50}
+                    min={0}
                     max={100}
                     value={editingSubject.targetPercentage}
                     onChange={(e) =>

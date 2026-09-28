@@ -317,22 +317,47 @@ export default function TimetableReview({
           }}
         >
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '6px' }}>
-              Attendance Target Percentage: <span style={{ color: 'var(--primary)' }}>{targetPercentage}%</span>
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>
+                Attendance Target Percentage:
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={targetPercentage}
+                  onChange={(e) => {
+                    const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                    setTargetPercentage(val);
+                  }}
+                  className="input"
+                  style={{
+                    width: '60px',
+                    padding: '3px 6px',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    textAlign: 'center',
+                    color: 'var(--primary)',
+                  }}
+                />
+                <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--primary)' }}>%</span>
+              </div>
+            </div>
             <input
               type="range"
-              min={60}
-              max={90}
+              min={0}
+              max={100}
               step={1}
               value={targetPercentage}
               onChange={(e) => setTargetPercentage(Number(e.target.value))}
-              style={{ width: '100%', accentColor: 'var(--primary)' }}
+              style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              <span>60% (Flexible)</span>
-              <span>75% (Standard University)</span>
-              <span>85% (Strict)</span>
+              <span>0% (No Min)</span>
+              <span>50% (Half)</span>
+              <span>75% (Standard)</span>
+              <span>100% (Strict)</span>
             </div>
           </div>
 

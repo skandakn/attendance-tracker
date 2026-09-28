@@ -187,4 +187,17 @@ describe('Attendance Calculation Engine', () => {
     expect(isAcademicPeriod(periodLecture)).toBe(true);
     expect(isAcademicPeriod(periodLab)).toBe(true);
   });
+
+  // Test target percentage extremes (0% and 100%)
+  it('correctly handles target percentage extremes (0% and 100%)', () => {
+    // 0% target: can miss any number of classes, no classes needed
+    expect(calculateCanMissClasses(5, 10, 0)).toBe(999);
+    expect(calculateClassesNeeded(0, 10, 0)).toBe(0);
+
+    // 100% target: if attended === conducted, 0 can miss
+    expect(calculateCanMissClasses(10, 10, 100)).toBe(0);
+    // 100% target: if missed, impossible to reach 100%
+    expect(calculateClassesNeeded(9, 10, 100)).toBe(999);
+    expect(calculateClassesNeeded(10, 10, 100)).toBe(0);
+  });
 });

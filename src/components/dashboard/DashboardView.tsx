@@ -30,7 +30,7 @@ export default function DashboardView({ setActiveTab, onSelectSubject }: Dashboa
   const { store, stats, subjectStatsList, markAttendance, fireConfetti } = useAttendance();
   const [selectedProjectionSubject, setSelectedProjectionSubject] = useState<string | null>(null);
 
-  const target = store.settings.targetPercentage || 75;
+  const target = store.settings.targetPercentage ?? 75;
   const isAbove = stats.percentage >= target;
 
   // Find today's day schedule

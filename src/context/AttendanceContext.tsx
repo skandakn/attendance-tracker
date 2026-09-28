@@ -148,7 +148,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return calculateSubjectStats(
         sub,
         store.attendanceRecords,
-        store.settings.targetPercentage || 75,
+        store.settings.targetPercentage ?? 75,
         init
       );
     });
@@ -439,7 +439,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             faculty: updated.faculty || '',
             room: updated.room || '',
             color: colorPalette[updatedSubjects.length % colorPalette.length],
-            targetPercentage: prev.settings.targetPercentage || 75,
+            targetPercentage: prev.settings.targetPercentage ?? 75,
           });
         }
       }
@@ -518,7 +518,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             faculty: period.faculty || '',
             room: period.room || '',
             color: colorPalette[updatedSubjects.length % colorPalette.length],
-            targetPercentage: prev.settings.targetPercentage || 75,
+            targetPercentage: prev.settings.targetPercentage ?? 75,
           });
         }
       }
@@ -665,7 +665,7 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         semester: timetable.semester || store.settings.semester,
         section: timetable.section || store.settings.section,
         selectedBatch: settings.selectedBatch || 'All',
-        targetPercentage: settings.targetPercentage || 75,
+        targetPercentage: settings.targetPercentage ?? 75,
         semesterStartDate: settings.semesterStartDate || new Date().toISOString().split('T')[0],
         trackingMode: settings.trackingMode || 'from_today',
         theme: store.settings.theme || 'dark',

@@ -186,11 +186,11 @@ export default function Sidebar({ activeTab, setActiveTab, onOpenUpload }: Sideb
             padding: '3px 8px',
             borderRadius: 'var(--radius-full)',
             background:
-              stats.percentage >= (store.settings.targetPercentage || 75)
+              stats.percentage >= (store.settings.targetPercentage ?? 75)
                 ? 'var(--success-light)'
                 : 'var(--danger-light)',
             color:
-              stats.percentage >= (store.settings.targetPercentage || 75)
+              stats.percentage >= (store.settings.targetPercentage ?? 75)
                 ? 'var(--success-text)'
                 : 'var(--danger-text)',
           }}

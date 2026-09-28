@@ -18,7 +18,7 @@ import {
 export default function AnalyticsView() {
   const { store, stats, subjectStatsList } = useAttendance();
 
-  const target = store.settings.targetPercentage || 75;
+  const target = store.settings.targetPercentage ?? 75;
   const totalMissed = stats.totalConducted - stats.totalAttended;
 
   // Breakdown by day of week

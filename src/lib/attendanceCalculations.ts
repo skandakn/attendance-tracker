@@ -36,6 +36,7 @@ export function calculateCanMissClasses(
   targetPercentage: number = 75
 ): number {
   if (conducted <= 0 || attended <= 0) return 0;
+  if (targetPercentage <= 0) return 999;
   const currentPct = (attended / conducted) * 100;
   if (currentPct < targetPercentage) return 0;
 
@@ -64,11 +65,14 @@ export function calculateClassesNeeded(
   targetPercentage: number = 75
 ): number {
   if (conducted <= 0) return 0;
+  if (targetPercentage <= 0) return 0;
   const currentPct = (attended / conducted) * 100;
   if (currentPct >= targetPercentage) return 0;
 
   const denominator = 100 - targetPercentage;
-  if (denominator <= 0) return 0;
+  if (denominator <= 0) {
+    return conducted > attended ? 999 : 0;
+  }
 
   const numerator = targetPercentage * conducted - 100 * attended;
   const needed = Math.ceil(numerator / denominator);
@@ -217,9 +221,11 @@ export function calculateOverallStats(
 
   const subjectStatsList: SubjectAttendanceStats[] = [];
 
+  const target = settings.targetPercentage ?? 75;
+
   for (const subject of subjects) {
     const init = settings.initialAttendance?.[subject.id];
-    const sStats = calculateSubjectStats(subject, records, settings.targetPercentage || 75, init);
+    const sStats = calculateSubjectStats(subject, records, target, init);
     subjectStatsList.push(sStats);
 
     totalAttended += sStats.attended;
@@ -227,7 +233,7 @@ export function calculateOverallStats(
     totalCancelled += sStats.cancelled;
     totalUnmarked += sStats.unmarked;
 
-    if (sStats.conducted > 0 && sStats.percentage < (settings.targetPercentage || 75)) {
+    if (sStats.conducted > 0 && sStats.percentage < target) {
       subjectsBelowTarget += 1;
     }
   }
@@ -235,7 +241,6 @@ export function calculateOverallStats(
   const overallPercentage = calculatePercentage(totalAttended, totalConducted);
 
   let status: 'above' | 'warning' | 'critical' = 'above';
-  const target = settings.targetPercentage || 75;
   if (totalConducted > 0) {
     if (overallPercentage < target) {
       status = 'critical';
